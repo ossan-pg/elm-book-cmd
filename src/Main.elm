@@ -24,13 +24,14 @@ main =
 
 
 type alias Model =
-    { result : String
+    { resultCore : String
+    , resultSvg : String
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { result = "" }
+    ( { resultCore = "", resultSvg = "" }
     , Cmd.none
     )
 
@@ -41,7 +42,8 @@ init _ =
 
 type Msg
     = Click
-    | GotRepo (Result Http.Error String)
+    | GotRepoCore (Result Http.Error String)
+    | GotRepoSvg (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -49,17 +51,29 @@ update msg model =
     case msg of
         Click ->
             ( model
-            , Http.get
-                { url = "https://api.github.com/repos/elm/core"
-                , expect = Http.expectString GotRepo
-                }
+            , Cmd.batch
+                [ Http.get
+                    { url = "https://api.github.com/repos/elm/core"
+                    , expect = Http.expectString GotRepoCore
+                    }
+                , Http.get
+                    { url = "https://api.github.com/repos/elm/svg"
+                    , expect = Http.expectString GotRepoSvg
+                    }
+                ]
             )
 
-        GotRepo (Ok repo) ->
-            ( { model | result = repo }, Cmd.none )
+        GotRepoCore (Ok repo) ->
+            ( { model | resultCore = repo }, Cmd.none )
 
-        GotRepo (Err error) ->
-            ( { model | result = Debug.toString error }, Cmd.none )
+        GotRepoCore (Err error) ->
+            ( { model | resultCore = Debug.toString error }, Cmd.none )
+
+        GotRepoSvg (Ok repo) ->
+            ( { model | resultSvg = repo }, Cmd.none )
+
+        GotRepoSvg (Err error) ->
+            ( { model | resultSvg = Debug.toString error }, Cmd.none )
 
 
 
@@ -70,5 +84,8 @@ view : Model -> Html Msg
 view model =
     div []
         [ button [ onClick Click ] [ text "Get Repository Info" ]
-        , p [] [ text model.result ]
+        , h3 [] [ text "https://api.github.com/repos/elm/core" ]
+        , p [] [ text model.resultCore ]
+        , h3 [] [ text "https://api.github.com/repos/elm/svg" ]
+        , p [] [ text model.resultSvg ]
         ]
